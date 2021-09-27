@@ -1,0 +1,40 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    server_name: "192.168.16.1"
+    document_root: /abdo/index
+    app_root: index
+  tasks:
+    - name: Update apt cache and install Nginx
+      apt:
+        name: nginx
+        state: latest
+        update_cache: yes
+    
+    - name: Apply Nginx template
+      template:
+        src: files/nginx.conf.j2
+        dest: /etc/nginx/sites-available/default
+      notify: Restart Nginx
+
+    - name: Enable new site
+      file:
+        src: /etc/nginx/sites-available/default
+        dest: /etc/nginx/sites-enabled/default
+        state: link
+        force: yes 
+        follow: false
+      notify: Restart Nginx
+
+    - name: Allow all access to tcp port 22
+      ufw:
+        rule: allow
+        port: '22'
+        proto: tcp
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
